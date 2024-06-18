@@ -5,15 +5,17 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use('/images', express.static(path.join(__dirname, '../src/public/images')));
+
+// Path untuk folder gambar yang digunakan oleh express.static
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../src/public/images/wisata');
+    const uploadPath = path.join(__dirname, 'public', 'images', 'wisata');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -27,6 +29,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Path ke file JSON yang digunakan
 const wisataFilePath = path.join(__dirname, 'data', 'wisata.json');
 
 app.get('/api/wisata', (req, res) => {
@@ -83,14 +86,11 @@ app.post('/api/wisata', upload.single('image'), (req, res) => {
   } = req.body;
   const image = req.file ? req.file.filename : '';
 
-  // Pemeriksaan apakah semua field telah diisi
-  // eslint-disable-next-line max-len
   if (!nama || !deskripsi || !deskripsifull || !lokasi || !tiket || !fasilitas || !review || !image || !rating) {
     res.status(400).send('Semua field harus diisi');
     return;
   }
 
-  // Membaca data dari file JSON
   fs.readFile(wisataFilePath, 'utf8', (err, data) => {
     if (err) {
       console.error('Error reading JSON file:', err);
@@ -107,14 +107,12 @@ app.post('/api/wisata', upload.single('image'), (req, res) => {
       return;
     }
 
-    // Pemeriksaan apakah data sudah ada
     const existingWisata = existingData.find((w) => w.nama === nama);
     if (existingWisata) {
       res.status(400).send('Data sudah ada');
       return;
     }
 
-    // Menambahkan data baru
     const newId = existingData.length > 0 ? existingData[existingData.length - 1].id + 1 : 1;
     const newWisata = {
       id: newId,
@@ -131,8 +129,6 @@ app.post('/api/wisata', upload.single('image'), (req, res) => {
 
     existingData.push(newWisata);
 
-    // Menyimpan data ke dalam file JSON
-    // eslint-disable-next-line no-shadow
     fs.writeFile(wisataFilePath, JSON.stringify(existingData, null, 2), (err) => {
       if (err) {
         console.error('Error writing JSON file:', err);
